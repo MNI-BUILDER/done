@@ -9,9 +9,9 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- CONFIG
 local UI_NAMES = { "Gear_Shop", "Seed_Shop", "SeasonPassUI", "PetShop_UI" }
 local UI_PADDING = 20
-local SCROLL_SPEED = 0.6     
-local UI_SCALE = 0.75
-local SCROLL_PAUSE_TIME = 1.2
+local SCROLL_SPEED = 0.3     
+local UI_SCALE = 0.76
+local SCROLL_PAUSE_TIME = 1.5
 
 local function debug(...)
 	-- print("[UI AutoScroll]", ...)
