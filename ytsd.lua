@@ -1,5 +1,5 @@
 -- Robust Roblox Client-Side UI Layout Manager (Improved, Defensive)
--- Now includes SeasonPassUI deep scanning AND proper CanvasSize fixing for all Store scrolling frames.
+-- Now includes SeasonPassUI deep scanning and forced scroll-frame attaching.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,7 +9,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- CONFIG
 local UI_NAMES = { "Gear_Shop", "Seed_Shop", "SeasonPassUI", "PetShop_UI" }
 local UI_PADDING = 20
-local SCROLL_SPEED = 0.5     
+local SCROLL_SPEED = 0.6     
 local UI_SCALE = 0.75
 local SCROLL_PAUSE_TIME = 1.2
 
@@ -36,7 +36,6 @@ local function tryAddUI(ui)
 	end
 end
 
--- initial find
 for _, name in ipairs(UI_NAMES) do
 	local ui = playerGui:FindFirstChild(name)
 	if ui then tryAddUI(ui) end
@@ -68,7 +67,6 @@ local function arrangeUIs()
 				child.AnchorPoint = corner.anchor
 				child.Position = corner.position
 				child.Size = UDim2.new(0, uiWidth, 0, uiHeight)
-
 				local sc = child:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", child)
 				sc.Scale = UI_SCALE
 			end
@@ -87,41 +85,13 @@ local function addFrame(sf)
 		if entry.frame == sf then return end
 	end
 
-	local layout =
-		sf:FindFirstChildOfClass("UIListLayout")
-		or sf:FindFirstChildOfClass("UIGridLayout")
-		or sf:FindFirstChildOfClass("UIPageLayout")
-
-	local entry = {
-		frame = sf,
-		layout = layout
-	}
-
-	table.insert(managedFrames, entry)
+	local layout = sf:FindFirstChildOfClass("UIListLayout") or sf:FindFirstChildOfClass("UIPageLayout")
+	table.insert(managedFrames, {frame = sf, listLayout = layout})
 
 	sf.ScrollingEnabled = true
 	sf.ScrollBarThickness = 8
 
 	debug("Added ScrollingFrame:", sf:GetFullName())
-
-	-- ** NEW: Auto CanvasSize Fix **
-	if layout then
-		layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			if layout:IsA("UIGridLayout") then
-				sf.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.X, 0, layout.AbsoluteContentSize.Y)
-			else
-				sf.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
-			end
-		end)
-
-		task.defer(function()
-			if layout:IsA("UIGridLayout") then
-				sf.CanvasSize = UDim2.new(0, layout.AbsoluteContentSize.X, 0, layout.AbsoluteContentSize.Y)
-			else
-				sf.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
-			end
-		end)
-	end
 end
 
 -- FORCE DETECT ALL SCROLLING FRAMES (SeasonPassUI fix)
@@ -151,9 +121,10 @@ local function getContentHeight(entry)
 	local f = entry.frame
 	if not f then return 0 end
 
-	local layout = entry.layout
-	if layout and layout.AbsoluteContentSize then
-		return layout.AbsoluteContentSize.Y
+	if entry.listLayout then
+		if entry.listLayout.AbsoluteContentSize then
+			return entry.listLayout.AbsoluteContentSize.Y
+		end
 	end
 
 	local offset = f.CanvasSize.Y.Offset or 0
@@ -164,6 +135,7 @@ end
 local function getMaxScroll(entry)
 	local f = entry.frame
 	if not f then return 0 end
+
 	if f.AbsoluteSize.Y <= 0 then return 0 end
 
 	local contentHeight = getContentHeight(entry)
